@@ -1,0 +1,127 @@
+// aoi = area or areas of interest
+var  aoi_evia=ee.FeatureCollection(evia_polygon);
+var aoi_papigion=ee.FeatureCollection(papigion_polygon);
+
+//Map
+Map.addLayer (aoi_evia,{}, "evia_fire");
+Map.addLayer (aoi_papigion,{}, "papigion_fire");
+
+//Great dataset for evia and papigion
+var dataset_evia = ee.ImageCollection('NASA/SMAP/SPL4SMGP/007')
+                .filter(ee.Filter.date('2015-03-31','2022-12-31'))
+                .filterBounds(aoi_evia)
+                .select('sm_surface');
+
+
+var dataset_papigion = ee.ImageCollection('NASA/SMAP/SPL4SMGP/007')
+                .select('sm_surface')
+                .filter(ee.Filter.date('2015-03-31','2022-12-31'))
+                .filterBounds(aoi_papigion);
+
+
+//reducers*****************
+var reducers_evia = ee.Reducer.min().combine({
+  reducer2: ee.Reducer.max(),
+  sharedInputs: true
+});
+var reducers1_evia = ee.Reducer.mean().combine({
+  reducer2: ee.Reducer.stdDev(),
+  sharedInputs: true
+});
+
+var reducers_papigion = ee.Reducer.min().combine({
+  reducer2: ee.Reducer.max(),
+  sharedInputs: true
+});
+var reducers1_papigion = ee.Reducer.mean().combine({
+  reducer2: ee.Reducer.stdDev(),
+  sharedInputs: true
+});
+
+
+//***********************
+var reduced_evia = dataset_evia.map(function(image){
+  return image.reduceRegions({
+    collection:aoi_evia, 
+    reducer:reducers_evia, 
+    scale: 11000
+  });
+});
+var reduced1_evia = dataset_evia.map(function(image){
+  return image.reduceRegions({
+    collection:aoi_evia, 
+    reducer:reducers1_evia, 
+    scale: 11000
+  });
+});
+
+
+
+var reduced_papigion = dataset_papigion.map(function(image){
+  return image.reduceRegions({
+    collection:aoi_papigion, 
+    reducer:reducers_papigion, 
+    scale: 11000
+  });
+});
+var reduced1_papigion = dataset_papigion.map(function(image){
+  return image.reduceRegions({
+    collection:aoi_papigion, 
+    reducer:reducers1_papigion, 
+    scale: 11000
+  });
+});
+
+var table_evia=reduced_evia.flatten(); 
+var table1_evia=reduced1_evia.flatten();
+var table_papigion=reduced_papigion.flatten();
+var table1_papigion=reduced1_papigion.flatten();
+
+//print (table_evia).....<5000
+//print (table1_evia)
+//print (table_papigion)
+//print (table1_papigion)
+
+//Export*******************************
+
+Export.table.toDrive({
+  collection: table_evia,
+  description:'EviaMinMax',
+  selectors: ['min','max'],
+  fileFormat: 'CSV'
+});
+
+Export.table.toDrive({
+  collection: table1_evia,
+  description:'EviaMeanStdDev',
+  selectors: ['mean','stdDev'],
+  fileFormat: 'CSV'
+});
+
+Export.table.toDrive({
+  collection: table_papigion,
+  description:'papigionMinMax',
+  selectors: ['min','max'],
+  fileFormat: 'CSV'
+});
+
+Export.table.toDrive({
+  collection: table1_papigion,
+  description:'papigionMeanStdDev',
+  selectors: ['mean','stdDev'],
+  fileFormat: 'CSV'
+});
+
+
+
+///Visualisasion
+//var soilMoistureVis_Evia={
+//  min:0.0,
+//  max:0.9,
+//  palette: ['0300ff','418504','efff07','efff07','ff0303'],
+//};
+//var soilMoistureVis_papigion={
+//  min:0.0,
+//  max:0.9,
+//  palette: ['0300ff','418504','efff07','efff07','ff0303'],
+//};
